@@ -1,0 +1,15 @@
+#+TITLE: OCaml MOOC
+#+AUTHOR: Andrew Jarrett
+
+Notes and problems as I work through [[https://www.fun-mooc.fr/courses/course-v1:parisdiderot%2B56002%2Bsession03/about][Université Paris Diderot's course on Functional Programming in OCaml]].
+
+
+* Week 0
+
+** W0 S1
+
+*** Notes
+
+
+
+
