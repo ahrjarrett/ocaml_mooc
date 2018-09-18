@@ -10,6 +10,158 @@ Notes and problems as I work through [[https://www.fun-mooc.fr/courses/course-v1
 
 *** Notes
 
+**** /Computing/ and /programming/
 
+Computing: 
+#+BEGIN_QUOTE
+the study of algorithmic processes that describe and transform information. The fundamental question is /What can be (efficiently) automated?/
+- 1989 ACM report on Computing as a Discipline
+#+END_QUOTE
 
+Basic components of computing:
+- a *program* that describes the intended transformation of information
+- a *machine* that executes the program
+
+*Many* machines, and *many ways* of writing a program.
+Some were invented well before the first modern computer.
+
+/Let's recall a bit of their history/
+
+**** Hilbert
+
+[[https://en.wikipedia.org/wiki/Entscheidungsproblem][Hilbert's decision problem]] (Entscheidungsproblem)
+
+If one had to pick a date, 1928 would be an interesting date. That year, Hilbert asked:
+
+#+BEGIN_QUOTE
+Can we devise a *process* to determine in *a finite number* of *operations* whether a first-order logic statement is valid?
+#+END_QUOTE
+
+The answer to this question is "no", but to find it, one needs to make precise what is
+- an operation and
+- a process of computation
+
+**** Turing
+
+Alan Turing answers Hilbert question in 1936, inventing the now world-known Turing machine automaton.
+
+Theoretical foundation of modern computers and imperative programming
+- tape ≈ addressable read-write memory with stored program
+- automaton ≈ microprocessor
+
+**** Turing Machines & Imperative Programming
+
+In an imperative program we /read, write, perform operations and take decisions/ based on the contents of /memory cells/ that hold the contents of variables like =c=, =n=, =res= in the following Java simple example.
+
+#+BEGIN_SRC java
+  public class Factorial
+  {
+      public static int compute(int n)
+      {
+          int res = 1;
+          for (int c = 1; c <= n; c++)
+              res = res * c;
+          return res
+      }
+  }
+#+END_SRC
+
+**** Church
+
+Alonzo Church (Alan Turing's PhD advisor)
+
+Also answers Hilbert's question in 1936 with /a completely diferent approach/, inventing the λ-calculus.
+- =λx.M= = nameless function with formal parameter =x= and body =M= (abstraction)
+- =MN= = call function =M= with actual parameter =N= (application)
+  
+This became the theoretical foundation of functional programming.
+
+=(λx.M)N -> β M[x := N]=
+
+The =β= reduction rule is *the one and only computational device in the system!
+
+**** The λ-calculus and Functional programming
+In a /functional program/ we /define/ (possibly recursive) functions, and /compose/ and /apply/ them /to compute/ the expected /results/.
+
+Like in the following example:
+
+#+BEGIN_SRC ocaml
+  let rec fact =
+    function n -> if n=0 then 1 else n*(fact (n-1))
+#+END_SRC
+
+In a truly functional programming language, functions are /first class citizens/. They can be:
+- named
+- evaluated
+- passed as arguments
+- returned as results
+- used everywhere an expression can fit
+
+(Ab)using Church's original notation one woulc write the second line:
+
+=λ n.if n=0 then 1 else n*(fact(n-1))=
+
+Hence the excitement about /lambdas/ being introduced in Java and C++ in recent years.
+
+**** The Church-Turing thesis
+
+People began to wonder if these 2 methods were really that different. Turing himself came up with a proof of their equivalence in 1937:
+
+#+BEGIN_QUOTE
+A function is *computable* by a Turing machine, *if and only if* it is *computable* using lambda calculus.
+#+END_QUOTE
+
+Church-Turing thesis:
+
+#+BEGIN_QUOTE
+A function that is *computable* by *any computing device* is also *computable* by a Turing machine.
+#+END_QUOTE
+
+In simpler terms:
+
+#+BEGIN_QUOTE
+All general purpose programming languages are *computationally equivalent*.
+#+END_QUOTE
+
+**** But programming languages are not born equal
+
+They have different expressiveness.
+
+The quest for more expressive constructs is never ending. leading to
+- different data representations
+- different execution models
+- diferent mechanisms of abstraction
+
+And there are many other desirable features
+- safety of execution
+- efficiency
+- maintainability
+  
+Depending on the problems at hand, some programming languages may be significantly better than others.
+
+**** An early assessment from FORTRAN's very creator
+
+#+BEGIN_QUOTE
+Functional programs deal with structured data, ... do not name their arguments, and do not require the complex machinery of procedure declarations...
+
+/Can programming be liberated from the von Neumann style?/
+- John Backus, Turing lecture 1978
+#+END_QUOTE
+
+[[https://www.thocp.net/biographies/papers/backus_turingaward_lecture.pdf][{PDF} Can Programming be liberated from the von Neumann style?]]
+
+**** Why functional programming is on the rise
+
+Quoting the report on Introductory Computer Science Education at CMU, [[http://www.cs.cmu.edu/~bryant/pubdir/cmu-cs-10-140.pdf]] there are some clear emerging trends
+
+Need for greater software reliability
+(Pure) functional programs are easier to prove correct than imperative ones
+
+Harnessing the power of parallel computation
+
+A carefully chosen set of higher order functions allows us to write programs that are easily parallelisable.
+
+A very well known example: *MapReduce*
+
+We will learn about functional programming using the /OCaml/ language.
 
