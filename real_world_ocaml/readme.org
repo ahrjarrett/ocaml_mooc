@@ -50,6 +50,8 @@ Installs:
 
 * Chapter 1: A Guided Tour
 
+[[https://github.com/ahrjarrett/ocaml_mooc/blob/master/real_world_ocaml/chapter1.ml][Chapter 1 Exercises & Practice Here]]
+
 p.3
 
 #+BEGIN_QUOTE
@@ -825,6 +827,58 @@ This file is executable; to run it do =./sum.native=.
 
 
 * Chapter 2: Variables & Functions
+
+** Variables
+
+#+BEGIN_QUOTE
+Every variable binding has a scope, which is the portion of the code that can refer to that binding. When using utop, the scope of a top-level let binding is everything that follows it in the session. When it shows up in a module, the scope is the remainder of that module.
+#+END_QUOTE
+
+let can also be used to create a variable binding whose scope is limited to a particular expression, using the following syntax:
+
+=let <variable> = <expr1> in <expr2>=
+
+Let's practice:
+
+#+BEGIN_SRC ocaml
+  let languages = "OCaml,JavaScript,Brainfuck,C";;
+
+  let dashed_langs =
+    let languages = String.split languages ~on:',' in
+    String.concat ~seq:"-" languages
+  ;;
+
+  dashed_langs;;
+  (* val dashed_langs : string = "OCaml-Perl-C++-C" *)
+#+END_SRC
+
+Notice how =languages= inside =dashed_langs= is different than it is outside the expression.
+
+A let binding in an inner scope can *shadow*, or /hide/, the definition from an outer scope.
+
+*** Pattern Matching and =let=
+
+=let= bindings support the use of /patterns/ on the lefthand side.
+
+#+BEGIN_SRC ocaml
+  let (ints, strings) =
+    List.unzip [(1,"one"); (2,"two"); (3,"three")];;
+
+  (* val ints : int list = [1; 2; 3]
+   ,* val strings : string list = ["one"; "two"; "three"] *)
+#+END_SRC
+
+=List.unzip= converts a list of tuple pairs into a pair of lists.
+
+A /pattern/ is essentially a description of the shape of a data structure, where some components are identifiers to be bound.
+
+Using a pattern in a let binding makes the most sense for a pattern that is /irrefutable/, i.e., where any value of the type in question is guaranteed to match the pattern. Tuple and record patterns are irrefutable, /but list patterns are not/.
+
+Therefore with lists we =match= to find patterns, instead of destructuring (is this true? my own interpretation).
+
+
+
+
 
 
 
