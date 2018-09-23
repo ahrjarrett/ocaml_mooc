@@ -1,0 +1,13 @@
+B /Users/aj/.opam/default/lib/base
+B /Users/aj/.opam/default/lib/base/caml
+B /Users/aj/.opam/default/lib/base/shadow_stdlib
+B /Users/aj/.opam/default/lib/sexplib0
+B /Users/aj/.opam/default/lib/stdio
+B _build/default/.freq.eobjs
+S /Users/aj/.opam/default/lib/base
+S /Users/aj/.opam/default/lib/base/caml
+S /Users/aj/.opam/default/lib/base/shadow_stdlib
+S /Users/aj/.opam/default/lib/sexplib0
+S /Users/aj/.opam/default/lib/stdio
+S .
+FLG -w -40
