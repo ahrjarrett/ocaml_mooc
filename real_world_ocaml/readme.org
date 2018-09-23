@@ -1453,12 +1453,303 @@ Now let's bring it all together:
    ,* - : unit = () *)
 #+END_SRC
 
-That was super fun.
+That was super fun. And look, it makes an org table:
 
+| language | architect      | first release |
+|----------+----------------+---------------|
+| Lisp     | John McCarthy  | 1958          |
+| C        | Dennis Ritchie | 1969          |
+| ML       | Robin Milner   | 1973          |
+| OCaml    | Xavier Leroy   | 1996          |
 
+*** More Useful List Functions
 
+**** Combining list elements with =List.reduce=
 
+=List.fold= is very powerful. Sometimes though you want something easier to use. =reduce= is a specialized version of =fold= that doesn't require an explicit starting value.
 
+Also the acc has to consume and product values of the same type as the elements of the list it allies to.
 
+Type signature:
 
+#+BEGIN_SRC ocaml
+  List.reduce;;
+  (* - : 'a list -> f:('a -> 'a -> 'a) -> 'a option = <fun> *)
+#+END_SRC
+
+=reduce= returns an /optional/ result, returning None when the list is empty.
+
+Examples:
+
+#+BEGIN_SRC ocaml
+  List.reduce ~f:(+) [2;3;4;5;6;7];;
+  (* - : int option = Some 27 *)
+  List.reduce ~f:(+) [];;
+  (* - : int option = None *)
+#+END_SRC
+
+**** Filtering with =List.filter= and =List.filter_map=
+
+#+BEGIN_SRC ocaml
+  List.filter ~f:(fun x -> x mod 2 = 0) [20;21;22;23;24;25];;
+  (* - : int list = [2; 4] *)
+#+END_SRC
+
+Sometimes you want to transform /and/ filter in the same computation.
+
+The function passed to =List.filter_map= returns an /optional value/, and =List.filter_map= drops all elements that return None.
+
+Let's write a function that reads the unique file extensions in the current directory:
+
+[[http://dev.realworldocaml.org/lists-and-patterns.html#filtering-with-list.filter-and-list.filter_map][Corrected version of this function available here]].
+
+#+BEGIN_SRC ocaml
+  List.filter_map;;
+  (* - : 'a list -> f:('a -> 'b option) -> 'b list = <fun> *)
+
+  let extensions filenames =
+    List.filter_map filenames ~f:(fun fname ->
+        match String.rsplit2 ~on:'.' fname with
+        | None | Some ("",_) -> None
+        | Some (_,ext) ->
+          Some ext)
+    |> List.dedup_and_sort ~compare:String.compare
+  ;;
+  (* val extensions : string list -> string list = <fun> *)
+
+  extensions (Sys.ls_dir ".");;
+  (* - : string list = ["ml"; "native"; "org"] *)
+#+END_SRC
+
+**** Partitioning with =List.partition_tf=
+
+Closely related to filtering is partitioning. =partition_tf= takes a list and a function for computing a Boolean condition on the list elements, and returns 2 lists. 
+
+The =tf= in the name is a mnemonic to remind the user that =true= elements go in the 1st list, =false= in the 2nd.
+
+#+BEGIN_SRC ocaml
+  let is_ocaml_source s =
+    match String.rsplit2 s ~on:'.' with
+    | Some (_,("ml"|"mli")) -> true
+    | _ -> false
+  ;;
+
+  let (ml_files,other_files) =
+    List.partition_tf (Sys.ls_dir ".") ~f:is_ocaml_source;;
+  (* val ml_files : string list =
+   ,*                ["chapter1.ml"; "sum.ml"; "chapter3.ml"; "chapter2.ml"] *)
+  (* val other_files : string list = ["_build"; "readme.org"; "sum.native"] *)
+#+END_SRC
+
+**** Combining lists
+
+Concatenation comes up a lot. There are a couple ways of doing it.
+
+1. First there's =List.append=, /for concatenating 2 lists/:
+   (Note that we can also use the =@= operator)
+
+   #+BEGIN_SRC ocaml
+     List.append [1;2;3] [4;5;6];;
+     (* - : int list = [1;2;3;4;5;6] *)
+   #+END_SRC
+
+2. Second is =List.concat=, /for concatenating a list of lists/:
+
+   #+BEGIN_SRC ocaml
+     List.concat [[1;2];[3;4];[5;6];[7];[]];;
+     (* - : int list = [1; 2; 3; 4; 5; 6; 7] *)
+   #+END_SRC
+   
+   Example of using =List.concat= with =List.map= to compute a recursive listing of a directory tree:
+
+   #+BEGIN_SRC ocaml
+     let rec ls_rec s =
+       if Sys.is_file_exn ~follow_symlinks:true s
+       then [s]
+       else
+         Sys.ls_dir s
+         |> List.map ~f:(fun sub -> ls_rec (s ^/ sub))
+         |> List.concat
+     ;;
+   #+END_SRC
+
+   Note that ^/ is an infix operator provided by Core for adding a new element to a string representing a file path. It is equivalent to Core’s Filename.concat
+
+   Or, we could just use =List.concat_map=, which makes only 1 pass over our data:
+
+   #+BEGIN_SRC ocaml
+     let rec ls_rec s =
+       if Sys.is_file_exn ~follow_symlinks:true s
+       then [s]
+       else
+         Sys.ls_dir s
+         |> List.concat_map ~f:(fun sub -> ls_rec (s ^/ sub))
+     ;;
+
+     ls_rec ".";;
+     (* - : string list =
+      ,* ["./chapter1.ml"; "./sum.ml"; "./_build/sum.ml.depends"; "./_build/_digests"; "./_build/sum.cmt"; "./_build/sum.cmo"; "./_build/sum.cmi"; "./_build/_log"; "./_build/sum.ml"; "./_build/ocamlc.where"; "./_build/sum.o"; "./_build/sum.cmx"; "./_build/sum.native"; "./readme.org"; "./sum.native"; "./chapter3.ml"; "./chapter2.ml"] *)
+   #+END_SRC
+
+*** COMMENT Tail Recursion
+
+Non-tail recursive:
+
+#+BEGIN_SRC ocaml
+  let rec length = function
+    | [] -> 0
+    | _ :: tl -> 1 + length tl
+  ;;
+#+END_SRC
+
+Tail recursive:
+
+#+BEGIN_SRC ocaml
+  let rec length_plus_n l n =
+    match l with
+    | [] -> n
+    | _ :: tl -> length_plus_n tl (n + 1)
+  ;;
+
+  let length l = length_plus_n l 0;;
+#+END_SRC
+
+The invocation is considered a tail call when the caller doesn’t do anything with the value returned by the callee except to return it.
+
+#+BEGIN_QUOTE
+Ordinary nontail recursive calls are reasonable when dealing with data structures like binary trees, where the depth of the tree is logarithmic in the size of your data. But when dealing with situations where the depth of the sequence of nested calls is on the order of the size of your data, tail recursion is usually the right approach.
+#+END_QUOTE
+
+*** Terser and Faster Patterns
+
+Let's improve our =destutter= function. Our previous implementation:
+
+#+BEGIN_SRC ocaml
+  let rec destutter list =
+    match list with
+    | [] -> []
+    | [hd] -> [hd]
+    | hd :: hd' :: tl ->
+      if hd = hd' then destutter (hd' :: tl)
+      else hd :: destutter (hd' :: tl)
+  ;;
+#+END_SRC
+
+Is it efficient? Sometimes it recreates on the right side of the arrow a value that already existed on the left. Thus, =[hd] -> [hd]= allocates a new element.
+
+/Introducing =as=!/
+
+We can reduce here by using an *as pattern*, which allows us sto declare a name for the thing matched by a pattern by using the keyword =as=.
+
+We can also use =function= while we're at it to eliminate the need for an explicit match /(??)/.
+
+#+BEGIN_SRC ocaml
+  let rec destutter = function
+    | [] as l -> l
+    | [_] as l -> l
+    | hd :: (hd' :: _ as tl) ->
+      if hd = hd' then destutter tl
+      else hd :: destutter tl
+  ;;
+#+END_SRC
+
+Let's go one step further and combine the 1st 2 cases into one using an Or pattern:
+
+#+BEGIN_SRC ocaml
+  let rec destutter = function
+    | [] | [_] as l -> l
+    | hd :: (hd' :: _ as tl) ->
+      if hd = hd' then destutter tl
+      else hd :: destutter tl
+  ;;
+#+END_SRC
+
+Can we go further?
+
+/Introducing =when=!/
+
+A =when= clause allows us to add an extra precondition to a pattern. Here we check whether the first 2 elements are equal:
+
+#+BEGIN_SRC ocaml
+  let rec destutter = function
+    | [] | [_] as l -> l
+    | hd :: (hd' :: _ as tl) when hd = hd' -> destutter tl
+    | hd :: tl -> hd :: destutter tl
+  ;;
+#+END_SRC
+
+Note that =when= clauses have some downsides. Once we add the ability to add an arbitrary condition to a pattern, something will be lost: the compiler's ability to determine if a match is exhausted.
+
+Consider this function:
+
+#+BEGIN_SRC ocaml
+  let rec count_some list =
+    match list with
+    | [] -> 0
+    | x :: tl when Option.is_none x -> count_some tl
+    | x :: tl when Option.is_some x -> 1 + count_some tl
+  ;;
+
+  (* Warning 8: this pattern-matching is not exhaustive.
+   ,*     Here is an example of a value that is not matched:
+   ,*     _::_
+   ,*     (However, some guarded clause may match this value.)
+   ,*     val count_some : 'a option list -> int = <fun> *)
+#+END_SRC
+
+The function does actually work fine. If we added another redundant case w/o a =when= clause, the compiler will stop complaining.
+
+A better approach would probably be to drop the second when clause and do:
+
+=| _ :: tl -> 1 + count_some tl=
+
+But the best solution is probably to drop the =when= clause and just match on =None= and =Some=:
+
+#+BEGIN_SRC ocaml
+  let rec count_some list =
+    match list with
+    | [] -> 0
+    | None   :: tl -> count_some tl
+    | Some _ :: tl -> 1 + count_some tl
+  ;;
+#+END_SRC
+
+The takeaway from all of this is although when clauses can be useful, we should prefer patterns wherever they are sufficient.
+
+Finally, this is how you would probably implement =count_some= in real life; this version is tail recursive, and uses =List.count=:
+
+#+BEGIN_SRC ocaml
+  let count_some l = List.count ~f:Option.is_some l;;
+#+END_SRC
+
+*** Polymorphic Compare
+
+In our last implementation of =destutter= we made use of the fact that OCaml lets us test equality between values of any type, using the = operator.
+
+This works on lists, too!
+
+=[3;4;5] = [3;4;5]=
+=[Some 3; None] = [Some 3; None];;=
+
+Let's inspect the equality operator:
+
+#+BEGIN_SRC ocaml :exports both
+  (=);;
+#+END_SRC
+
+#+RESULTS:
+: - : 'a -> 'a -> bool = <fun>
+
+We can indeed see that it is polymorphic.
+
+Polymorphic compare does have some limitations. For example, it will fail at runtime if it encounters a function value:
+
+#+BEGIN_SRC ocaml :exports both
+  (fun x -> x + 1) = (fun x -> x + 1);;
+#+END_SRC
+
+#+RESULTS:
+: Exception: Invalid_argument "compare: functional value".
+
+*Note:* For strings comparison operators use a lexicographic comparison.
 

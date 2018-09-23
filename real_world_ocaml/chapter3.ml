@@ -1,4 +1,6 @@
 (* 2018-09-23 *)
+
+#require "Core";;
 open Core;;
 
 (* pattern matching for a literal value (0) *)
@@ -129,11 +131,94 @@ printf "%s\n"
  * - : unit = () *)
      
 
-       
+(* p. 59, reduce *)
+List.reduce;;
+(* - : 'a list -> f:('a -> 'a -> 'a) -> 'a option = <fun> *)
+
+List.reduce ~f:(+) [2;3;4;5;6;7];;
+(* - : int option = Some 27 *)
+List.reduce ~f:(+) [];;
+(* - : int option = None *)
 
 
+(* p. 59, filter and filter_map *)
+
+List.filter_map;;
+(* - : 'a list -> f:('a -> 'b option) -> 'b list = <fun> *)
+
+let extensions filenames =
+  List.filter_map filenames ~f:(fun fname ->
+      match String.rsplit2 ~on:'.' fname with
+      | None | Some ("",_) -> None
+      | Some (_,ext) ->
+        Some ext)
+  |> List.dedup_and_sort ~compare:String.compare
+;;
+(* val extensions : string list -> string list = <fun> *)
+
+extensions (Sys.ls_dir ".");;
+(* - : string list = ["ml"; "native"; "org"] *)
 
 
-    
-  
+(* p. 60, partition_tf *)
+
+let is_ocaml_source s =
+  match String.rsplit2 s ~on:'.' with
+  | Some (_,("ml"|"mli")) -> true
+  | _ -> false
+;;
+
+let (ml_files,other_files) =
+  List.partition_tf (Sys.ls_dir ".") ~f:is_ocaml_source;;
+(* val ml_files : string list =
+ *                ["chapter1.ml"; "sum.ml"; "chapter3.ml"; "chapter2.ml"] *)
+(* val other_files : string list = ["_build"; "readme.org"; "sum.native"] *)
+
+
+(* p. 60, combining lists *)
+
+let rec ls_rec s =
+  if Sys.is_file_exn ~follow_symlinks:true s
+  then [s]
+  else
+    Sys.ls_dir s
+    |> List.map ~f:(fun sub -> ls_rec (s ^/ sub))
+    |> List.concat
+;;
+
+let rec ls_rec s =
+  if Sys.is_file_exn ~follow_symlinks:true s
+  then [s]
+  else
+    Sys.ls_dir s
+|> List.concat_map ~f:(fun sub -> ls_rec (s ^/ sub));;
+
+
+(* p. 63, rewriting destutter with =as= and =function= *)
+let rec destutter = function
+  | [] as l -> l
+  | [_] as l -> l
+  | hd :: (hd' :: _ as tl) ->
+    if hd = hd' then destutter tl
+    else hd :: destutter tl
+;;
+
+let rec destutter = function
+  | [] | [_] as l -> l
+  | hd :: (hd' :: _ as tl) ->
+    if hd = hd' then destutter tl
+    else hd :: destutter tl
+;;
+
+let rec destutter = function
+  | [] | [_] as l -> l
+  | hd :: (hd' :: _ as tl) when hd = hd' -> destutter tl
+  | hd :: tl -> hd :: destutter tl
+;;
+
+
+(* p. 65, when clauses *)
+let count_some l = List.count ~f:Option.is_some l;;
+count_some [Some 3; None; Some 4];;
+(* - : int = 2 *)
 
