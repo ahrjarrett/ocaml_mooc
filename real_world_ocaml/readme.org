@@ -1289,7 +1289,176 @@ Lists are in fact singly linked lists. This is why =::= can extend a list w/o mo
 [A] match statement in sum is really doing two things: first, it’s acting as a case-analysis tool, breaking down the possibilities into a pattern-indexed list of cases. Second, it lets you name substructures within the data structure being matched.
 #+END_QUOTE
 
-BOOKMARK: Bottom of p. 50 (75 in the previewer)
+Note that we can match for *literal values*.
+
+#+BEGIN_SRC ocaml
+  let rec drop_zero list =
+    match list with
+    | [] -> []
+    | 0  :: tl -> drop_zero tl
+    | hd :: tl -> hd :: drop_zero tl
+  ;;
+
+  drop_zero [1;0;2;3;0];;
+  (* [1; 2; 3] *)
+#+END_SRC
+
+** Limitations (and Blessings) of Pattern Matching
+
+Patterns can’t be used to express arbitrary conditions. They characterize the layout of a data structure and can even include literals... a pattern can check if a list has two elements, but it can’t check if the first two elements are equal to each other. (?)
+
+#+BEGIN_QUOTE
+The fact that the pattern language is limited turns out to be a very good thing, making it possible to build better support for patterns in the compiler. In particular, both the efficiency of match statements and the ability of the compiler to detect errors in matches depend on the constrained nature of patterns.
+#+END_QUOTE
+
+*** Performance
+
+*Wildcard:*
+
+=_= is the wildcard pattern and matches any value, but /without binding a variable name to the value in question/.
+  
+(See chapter3.ml for an example using =core_bench=.
+
+#+BEGIN_QUOTE
+In this case, the match-based implementation is many times faster than the if-based implementation. The difference comes because we need to effectively do the same work multiple times, since each function we call has to reexamine the first element of the list to determine whether or not it’s the empty cell. With a match statement, this work happens exactly once per list element.
+#+END_QUOTE
+
+Only caveat is long strings:
+
+#+BEGIN_QUOTE
+...matches containing a long sequence of strings can be outperformed by a hash table.
+#+END_QUOTE
+
+
+*** Detecting Errors
+
+The error-detecting power of pattern matching might be more important than its performance, because =match= checks statements for exhausiveness.
+
+This makes refactoring much easier, because the compiler will tell you everywhere where stuff is bork!
+
+** Using the List Module Effectively
+
+Using the List module is probably what you'll use most in real life.
+
+Let's look at =map=, =map2_exn= and =fold= by writing a function that renders (or pretty prints) a table.
+
+=map= we're familiar with; =map2_exn= takes 2 lists and a function for combining them, e.g.:
+
+#+BEGIN_SRC ocaml
+  List.map2_exn ~f:Int.max [1;2;3] [3;2;1];;
+#+END_SRC
+
+The =_exn= is there because the function throws an exception if the lists are of mismatched length.
+
+=fold= is more complicated. It takes 3 arguments: a list, an initial value, and a function for updating the accumulator (it's like reduce!).
+
+Here are 2 uses of =fold=: one which sums a list, another which reverses it.
+
+#+BEGIN_SRC ocaml
+  List.fold ~init:0 ~f:(+) [1;2;3;4];;
+  (* - : int = 10 *)
+
+  List.fold ~init:[] ~f:(fun list x -> x :: list) [1;2;3;4];;
+  (* - : int list = [4; 3; 2; 1] *)
+#+END_SRC
+
+Let's put these 3 fns together to compute max column widths:
+
+#+BEGIN_SRC ocaml
+  let max_widths header rows =
+    let lengths l = List.map ~f:String.length l in
+    List.fold rows
+      ~init:(lengths header)
+      ~f:(fun acc row ->
+          List.map2_exn ~f:Int.max acc (lengths row))
+  ;;
+#+END_SRC
+
+Whoa, I totally get it?
+
+Now that we know how to compute column widths, we can write the code to generate the line that separates the header from the rest of the table.
+
+#+BEGIN_SRC ocaml
+  let render_separator widths =
+    let pieces = List.map widths
+        ~f:(fun w -> String.make (w + 2) '-')
+    in
+    "|" ^ String.concat ~sep:"+" pieces ^ "|"
+  ;;
+  (* val render_separator : int list -> string = <fun> *)
+
+  render_separator [12;3;9];;
+  (* - : string = "|--------------+-----+-----------|" *)
+#+END_SRC
+
+*Note:* Performance of =String.concat= and =^=
+
+- Avoid =^= for joining long numbres of strings b/c it allocates a new string every time it runs.
+
+- Sounds like O(n^2) run time
+
+Now let's render a row w/ data in it. We'll write a fn called =pad=:
+
+#+BEGIN_SRC ocaml
+  let pad s length =
+    " " ^ s ^ String.make (length - String.length s + 1) ' '
+  ;;
+  (* val pad : string -> int -> string = <fun> *)
+
+  pad "hello" 10;;
+  (* - : string = " hello      " *)
+#+END_SRC
+
+We'll use =map2_exn= to combine the list of data in the row w/ the list of widths:
+
+#+BEGIN_SRC ocaml
+  let render_row row widths =
+    let padded = List.map2_exn row widths ~f:pad in
+    "|" ^ String.concat ~sep:"|" padded ^ "|"
+  ;;
+  (* val render_row : string list -> int list -> string = <fun> *)
+
+  render_row ["Hello";"World"] [12; 9];;
+  (* - : string = "| Hello        | World     |" *)
+#+END_SRC
+
+Now let's bring it all together:
+
+#+BEGIN_SRC ocaml
+  let render_table header rows =
+    let widths = max_widths header rows in
+    String.concat ~sep:"\n"
+      (render_row header widths
+       :: render_separator widths
+       :: List.map rows ~f:(fun row -> render_row row widths)
+      )
+  ;;
+  (* val render_table : string list -> string list list -> string = <fun> *)
+
+  printf "%s\n"
+    (render_table
+       ["language";"architect";"first release"]
+       [ ["Lisp" ;"John McCarthy" ;"1958"] ;
+         ["C"    ;"Dennis Ritchie";"1969"] ;
+         ["ML"   ;"Robin Milner"  ;"1973"] ;
+         ["OCaml";"Xavier Leroy"  ;"1996"] ;
+  ]);;
+
+  (* | language | architect      | first release |
+   ,* |----------+----------------+---------------|
+   ,* | Lisp     | John McCarthy  | 1958          |
+   ,* | C        | Dennis Ritchie | 1969          |
+   ,* | ML       | Robin Milner   | 1973          |
+   ,* | OCaml    | Xavier Leroy   | 1996          |
+   ,* - : unit = () *)
+#+END_SRC
+
+That was super fun.
+
+
+
+
+
 
 
 
