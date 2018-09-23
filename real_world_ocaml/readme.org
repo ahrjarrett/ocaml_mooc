@@ -1,0 +1,228 @@
+#+TITLE: Real World OCaml Notes
+#+AUTHOR: Andrew Jarrett
+#+DATE: <2018-09-22 Sat>
+
+
+* Getting Everything Set up & Installed
+
+The instructions in the book are dated, so I used [[https://dev.realworldocaml.org/install.html][this tutorial]] to get OCaml, the package manager, and a number of libraries set up and installed for working through the book.
+
+** Core
+
+When trying to evaluate =open Core.Std;;= in utop (like the book recommends), you'll crash headfirst into =Unbound module Core=.
+
+Make sure you've installed core.
+
+=$ opam install Core=
+
+Then in utop you can do:
+
+=# #require "Core";;=
+
+Note that the second =#= is not part of the prompt, but part of what you type in. Afterwards you can do:
+
+=# open Core;;=
+
+And you're good to start using Core.
+
+** Other libraries:
+
+While we're at it, let's just install everything we'll need for the book:
+
+=$ opam install async yojson core_extended core_bench cohttp async_graphics cryptokit menhir=
+
+Installs:
+
+- opam 
+- install 
+- async 
+- yojson 
+- core_extended 
+- core_bench 
+- cohttp 
+- async_graphics 
+- cryptokit 
+- menhir
+
+
+
+
+
+* Chapter 1: A Guided Tour
+
+p.3
+
+#+BEGIN_QUOTE
+Throughout the book we’re going to use Core, a more full-featured and capable re‐ placement for OCaml’s standard library. 
+#+END_QUOTE
+
+** OCaml as a Calculator
+
+Using Core:
+
+#+BEGIN_SRC ocaml
+  $ utop
+  # open Core;; (* book says `open Core.std;;`, but this looks to be defunct *)
+#+END_SRC
+
+A note on =;;=:
+
+#+BEGIN_QUOTE
+We needed to type ;; in order to tell the toplevel that it should evaluate an expres‐ sion. This is a peculiarity of the toplevel that is not required in standalone programs (though it is sometimes helpful to include ;; to improve OCaml’s error reporting, by making it more explicit where a given top-level declaration was intended to end).
+#+END_QUOTE
+
+A note on underscores in numbers:
+
+#+BEGIN_QUOTE
+OCaml allows you to place underscores in the middle of numeric literals to improve readability.
+#+END_QUOTE
+
+Example:
+
+=30_000_000 / 300_000=
+
+On syntax for /let bindings/:
+
+#+BEGIN_QUOTE
+Punctuation is excluded, except for _ and ', and variables must start with a lowercase letter or an underscore
+#+END_QUOTE
+
+** Functions & Type Inference
+
+The let syntax can also be used to define a function.
+
+Looking at types, briefly:
+
+#+BEGIN_SRC ocaml
+  # let ratio x  y=
+  Float.of_int x /. Float.of_int y
+  ;;
+  val ratio : int -> int -> float = <fun> # ratio 4 7;;
+  - : float = 0.571428571429
+#+END_SRC
+
+Here we use the Float module. Note that module names always start with a capital letter.
+
+Because functions are first-class in OCaml, we can pass functions as arguments:
+
+#+BEGIN_SRC ocaml :exports both
+  let sum_if_true test first second =
+    (if test first then first else 0)
+    + (if test second then second else 0)
+  ;;  (* val sum_if_true : (int -> bool) -> int -> int -> int = <fun> *)
+
+  let even x =
+    x mod 2 = 0;;
+
+  sum_if_true even 8 4;;          (* 12 *)
+
+  sum_if_true even 3 2;;          (* 2 *)
+#+END_SRC
+
+#+RESULTS:
+: 2
+
+Look how it inferred the type of our =test= function! So cool.
+
+** Type inference
+
+How did it infer that =sum_if_true= took a function of type (int -> bool)?
+
+OCaml requires that both branches of an if statement have the same type:
+
+#+BEGIN_QUOTE
+OCaml requires that both branches of an if statement have the same type, so the expression if test first then first else 0 requires that first must be the same type as 0, and so first must be of type int.
+#+END_QUOTE
+
+To help with getting an intuition for this, let's annotate sum_if_true:
+
+#+BEGIN_SRC ocaml :exports both
+let sum_if_true (test : int -> bool) (x : int) (y : int) : int =
+  (if test x then x else 0)
+  + (if test y then y else 0) ;;
+#+END_SRC
+
+#+RESULTS:
+: val sum_if_true : (int -> bool) -> int -> int -> int = <fun>
+
+** Inferring Generic Types
+
+Sometimes there isn't enough info to infer a variable's type, for example:
+
+#+BEGIN_SRC ocaml :exports both
+let first_if_true test x y =
+  if test x then x else y;;
+#+END_SRC
+
+#+RESULTS:
+: val first_if_true : ('a -> bool) -> 'a -> 'a -> 'a = <fun>
+
+OCaml has introduced a *type variable* \'a to express that the type is generic. This kind of genericity is called *parametric polymorphism*.
+
+#+BEGIN_QUOTE
+Whatever type 'a is, it has to be the same as the type of the other two arguments, x and y, and of the return value of firstiftrue. This kind of genericity is called parametric polymorphism because it works by parameterizing the type in question with a type variable
+#+END_QUOTE
+
+#+BEGIN_SRC ocaml :exports both
+let first_if_true test x y =
+  if test x then x else y;;
+
+let long_string s = String.length s > 6;;
+
+first_if_true long_string "short" "lonnnnnng";;
+#+END_SRC
+
+#+RESULTS:
+: lonnnnnng
+
+We can use =first_if_true= with ints, too:
+
+#+BEGIN_SRC ocaml :exports both
+let big_number x = x > 3;;
+
+first_if_true big_number 4 3;;
+#+END_SRC
+
+#+RESULTS:
+: 4
+
+** Type Errors Versus Exceptions
+
+Big difference is that (usually) type errors are encountered at compile time, and exceptions occur at run time.
+
+Exceptions occur for things the compiler can't check, for example division by zero.
+
+#+BEGIN_SRC ocaml :exports both
+let is_a_multiple x y = x mod y = 0 ;;
+val is_a_multiple : int -> int -> bool = <fun> # is_a_multiple 8 2;;
+is_a_multiple 8 0;;
+#+END_SRC
+
+#+RESULTS:
+: Exception: Division_by_zero.
+
+** Tupes, Lists, Options & Pattern Matching
+
+*** Tuples
+
+You can create a tuple by joining values together with a comma:
+
+#+BEGIN_SRC ocaml :exports both
+let a_tuple = (3,"three");;
+#+END_SRC
+
+#+RESULTS:
+: val a_tuple : int * string = (3, "three")
+
+
+
+
+
+
+
+
+
+
+
+
+
