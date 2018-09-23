@@ -1277,3 +1277,19 @@ Optional arguments can be tricky to think about in the presence of partial appli
 
 * Chapter 3: Lists & Patterns
 
+We can make lists with the =[1;3]= or the =1::3= syntax.
+
+Note that =::= is right associative, which is why we don't need to put parens around multiple successive invocations.
+
+Lists are in fact singly linked lists. This is why =::= can extend a list w/o modifying it.
+
+** Using Patterns to Extract Data from a List
+
+#+BEGIN_QUOTE
+[A] match statement in sum is really doing two things: first, it’s acting as a case-analysis tool, breaking down the possibilities into a pattern-indexed list of cases. Second, it lets you name substructures within the data structure being matched.
+#+END_QUOTE
+
+BOOKMARK: Bottom of p. 50 (75 in the previewer)
+
+
+
