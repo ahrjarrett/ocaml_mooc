@@ -1883,4 +1883,3 @@ The implementation details of a module can be hidden by attaching an /interface/
 
 Note that w/ OCaml, /interfact/, /signature/ and /module type/ are interchangeable. A module =filename.ml= can be constrained by a signature place in a file called =filename.mli=.
 
-
